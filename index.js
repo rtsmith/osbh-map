@@ -1,8 +1,18 @@
 var Particle = require('particle-api-js');
 var app = require('express')();
-var creds = require('./credentials');
-var token;
+var creds = require('./secret/credentials');
 
+// firebase
+var firebase = require('firebase-admin');
+var serviceAccount = require('./secret/osbh-map-firebase-adminsdk-2c4qw-a154082987.json');
+firebase.initializeApp({
+  credential: firebase.credential.cert(serviceAccount),
+  databaseURL: "https://osbh-map.firebaseio.com"
+});
+var database = firebase.database()
+// 
+
+var token;
 var particle = new Particle();
 
 //
@@ -20,43 +30,45 @@ app.listen(8080, () => {
 particle.login({
   username: creds.particleUser,
   password: creds.particlePassword
-}).then(
-  function(data) {
-    token = data.body.access_token;
-    console.log("Logged in, getting event stream");
+}).then(function(data) {
+  token = data.body.access_token;
+  console.log("Logged in, getting event stream");
 
-    var req = particle.getEventStream({auth: token}).then(function(stream) {
-      stream.on('event', function(data) {
-        console.log('Event: ' + JSON.stringify(data));
-        if (data.name.startsWith('hook-response/deviceLocator')) {
-          var a = data.data.split(",");
-          // convert strings to numbers: lat, lng, accuracy
-          a[0] = parseFloat(a[0]);
-          a[1] = parseFloat(a[1]);
-          a[2] = parseInt(a[2]);
+  var req = particle.getEventStream({
+    auth: token,
+    name: 'hook-response/deviceLocator/api/0'
+  }).then(function(stream) {
+    stream.on('event', function(data) {
+      console.log('Event: ' + JSON.stringify(data));
+      if (data.name.startsWith('hook-response/deviceLocator')) {
+        var a = data.data.split(",");
+        // convert strings to numbers: lat, lng, accuracy
+        a[0] = parseFloat(a[0]);
+        a[1] = parseFloat(a[1]);
+        a[2] = parseInt(a[2]);
 
-          var msg = JSON.stringify({
-            id: data.coreid,
-            pub: data.published_at,
-            pos: {
-              lat: a[0],
-              lng: a[1],
-            },
-            acc: a[2]
-          });
-          console.log(msg);
-        }
-      });
-
-      // EventStream fails silently, this error never happens: 
-      // https://github.com/spark/particle-api-js/issues/15
-      stream.on('error', (err) => {
-        console.log('woops error!!!!!!=====')
-      })
-
+        var blob = {
+          id: data.coreid,
+          pub: data.published_at,
+          pos: {
+            lat: a[0],
+            lng: a[1],
+          },
+          acc: a[2]
+        };
+        console.log(JSON.stringify(blob));
+        database.ref('/' + data.coreid).set(blob);
+      }
     });
-  },
-  function (err) {
-    console.log('Could not log in.', err);
-  }
-);
+
+    // https://github.com/spark/particle-api-js/issues/15
+    // EventStream fails silently, this error never happens: 
+    stream.on('error', (err) => {
+      console.log('woops error!!!!!!=====')
+    })
+
+  });
+},
+function (err) {
+  console.log('Could not log in.', err);
+});
