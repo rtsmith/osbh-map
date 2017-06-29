@@ -16,9 +16,9 @@
   ],
   "license": "ISC",
   "dependencies": {
+    "ejs": "^2.5.6",
     "express": "^4.15.3",
     "firebase-admin": "^5.0.0",
-    "particle-api-js": "^6.5.0",
-    "pug": "^2.0.0-rc.2"
+    "particle-api-js": "^6.5.0"
   }
 }

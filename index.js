@@ -13,12 +13,24 @@ var database = firebase.database()
 // 
 
 var token;
+var locations;
 var particle = new Particle();
 
 //
 // serve html to client
+(function getStoredLocations() {
+  database.ref('/').once('value').then(function(snapshot) {
+    var data = snapshot.val();
+    locations = JSON.stringify(data);
+    console.log(locations)
+  })
+})()
+
 app.get('/', (req, res) => {
-  res.render("map.ejs", { map_api_key: maps_key });
+  res.render("map.ejs", {
+    map_api_key: creds.maps_key,
+    devices: locations
+  });
 });
 
 app.listen(8080, () => {

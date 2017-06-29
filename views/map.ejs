@@ -91,7 +91,8 @@ html,body {
 
   // the map
   var map;
-  var devices = {};
+  var devices = JSON.parse('<%- devices %>');
+  console.log(devices);
   var device_ids = [];
   var current_device;
   var fill_colors = [ 'red', 'orange', 'yellow', 'green',
