@@ -18,16 +18,17 @@ var particle = new Particle();
 
 //
 // serve html to client
-(function getStoredLocations() {
-  database.ref('/').once('value').then(function(snapshot) {
-    var data = snapshot.val();
-    locations = JSON.stringify(data);
-    console.log(locations)
-  })
-})()
+
+// get device locations on init and listen for additions
+
+database.ref('/').on('value', function(snapshot) {
+  locations = JSON.stringify(snapshot.val())
+})
+
+// listen for new device locations
 
 app.get('/', (req, res) => {
-  res.render("map.ejs", {
+  res.render("index.ejs", {
     map_api_key: creds.maps_key,
     devices: locations
   });
@@ -48,11 +49,10 @@ particle.login({
 
   var req = particle.getEventStream({
     auth: token,
-    name: 'hook-response/deviceLocator/api/0'
+    product: 1003
   }).then(function(stream) {
     stream.on('event', function(data) {
       console.log('Event: ' + JSON.stringify(data));
-      if (data.name.startsWith('hook-response/deviceLocator')) {
         var a = data.data.split(",");
         // convert strings to numbers: lat, lng, accuracy
         a[0] = parseFloat(a[0]);
@@ -60,7 +60,6 @@ particle.login({
         a[2] = parseInt(a[2]);
 
         var blob = {
-          id: data.coreid,
           pub: data.published_at,
           pos: {
             lat: a[0],
@@ -69,8 +68,10 @@ particle.login({
           acc: a[2]
         };
         console.log(JSON.stringify(blob));
-        database.ref('/' + data.coreid).set(blob);
-      }
+        // naive check
+        if (a[0] != undefined) {
+          database.ref('/' + data.coreid).set(blob);
+        }
     });
 
     // https://github.com/spark/particle-api-js/issues/15

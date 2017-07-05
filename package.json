@@ -19,6 +19,7 @@
     "ejs": "^2.5.6",
     "express": "^4.15.3",
     "firebase-admin": "^5.0.0",
+    "lodash": "^4.17.4",
     "particle-api-js": "^6.5.0"
   }
 }
